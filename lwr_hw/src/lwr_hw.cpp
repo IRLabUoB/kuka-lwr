@@ -13,13 +13,13 @@ namespace lwr_hw
     // ALLOCATE MEMORY
 
     // JOINT NAMES ARE TAKEN FROM URDF NAME CONVENTION
-    joint_names_.push_back( robot_namespace_ + std::string("_a1_joint") );
-    joint_names_.push_back( robot_namespace_ + std::string("_a2_joint") );
-    joint_names_.push_back( robot_namespace_ + std::string("_e1_joint") );
-    joint_names_.push_back( robot_namespace_ + std::string("_a3_joint") );
-    joint_names_.push_back( robot_namespace_ + std::string("_a4_joint") );
-    joint_names_.push_back( robot_namespace_ + std::string("_a5_joint") );
-    joint_names_.push_back( robot_namespace_ + std::string("_a6_joint") );
+    joint_names_.push_back( robot_namespace_ + std::string("_0_joint") );
+    joint_names_.push_back( robot_namespace_ + std::string("_1_joint") );
+    joint_names_.push_back( robot_namespace_ + std::string("_2_joint") );
+    joint_names_.push_back( robot_namespace_ + std::string("_3_joint") );
+    joint_names_.push_back( robot_namespace_ + std::string("_4_joint") );
+    joint_names_.push_back( robot_namespace_ + std::string("_5_joint") );
+    joint_names_.push_back( robot_namespace_ + std::string("_6_joint") );
     cart_12_names_.push_back( robot_namespace_ + std::string("_rot_xx") );
     cart_12_names_.push_back( robot_namespace_ + std::string("_rot_yx") );
     cart_12_names_.push_back( robot_namespace_ + std::string("_rot_zx") );
@@ -414,7 +414,7 @@ namespace lwr_hw
 
     // Only *standard* transmission_interface are parsed
     transmission_interface::TransmissionParser::parse(urdf_string, transmissions);
-
+    std::cout << urdf_string_ << std::endl;
     // Now iterate and save only transmission from this robot
     for (int j = 0; j < n_joints_; ++j)
     {

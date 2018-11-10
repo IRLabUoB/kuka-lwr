@@ -8,24 +8,24 @@ lwr:
   joint_trajectory_controller:
     type: position_controllers/JointTrajectoryController
     joints: 
-      - lwr_a1_joint
-      - lwr_a2_joint
-      - lwr_e1_joint
-      - lwr_a3_joint
-      - lwr_a4_joint
-      - lwr_a5_joint
-      - lwr_a6_joint
+      - lwr_0_joint
+      - lwr_1_joint
+      - lwr_2_joint
+      - lwr_3_joint
+      - lwr_4_joint
+      - lwr_5_joint
+      - lwr_6_joint
 
   stiffness_trajectory_controller:
     type: position_controllers/JointTrajectoryController
     joints:
-      - lwr_a1_joint_stiffness
-      - lwr_a2_joint_stiffness
-      - lwr_e1_joint_stiffness
-      - lwr_a3_joint_stiffness
-      - lwr_a4_joint_stiffness
-      - lwr_a5_joint_stiffness
-      - lwr_a6_joint_stiffness
+      - lwr_0_joint_stiffness
+      - lwr_1_joint_stiffness
+      - lwr_2_joint_stiffness
+      - lwr_3_joint_stiffness
+      - lwr_4_joint_stiffness
+      - lwr_5_joint_stiffness
+      - lwr_6_joint_stiffness
 
 ## OTHER CUSTOM CONTROLLERS LEFT HERE AS EXAMPLES
   arm_state_controller: 
