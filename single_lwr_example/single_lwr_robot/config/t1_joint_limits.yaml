@@ -2,37 +2,37 @@
 # Specific joint properties can be changed with the keys [max_position, min_position, max_velocity, max_acceleration]
 # Joint limits can be turned off with [has_velocity_limits, has_acceleration_limits]
 joint_limits:
-  lwr_a1_joint:
+  lwr_0_joint:
     has_velocity_limits: true
     max_velocity: 0.24
     has_acceleration_limits: true
     max_acceleration: 0.5
-  lwr_a2_joint:
+  lwr_1_joint:
     has_velocity_limits: true
     max_velocity: 0.24
     has_acceleration_limits: true
     max_acceleration: 0.5
-  lwr_e1_joint:
+  lwr_2_joint:
     has_velocity_limits: true
     max_velocity: 0.24
     has_acceleration_limits: true
     max_acceleration: 0.8
-  lwr_a3_joint:
+  lwr_3_joint:
     has_velocity_limits: true
     max_velocity: 0.24
     has_acceleration_limits: true
     max_acceleration: 0.8
-  lwr_a4_joint:
+  lwr_4_joint:
     has_velocity_limits: true
     max_velocity: 0.24
     has_acceleration_limits: true
     max_acceleration: 0.8
-  lwr_a5_joint:
+  lwr_5_joint:
     has_velocity_limits: true
     max_velocity: 0.24
     has_acceleration_limits: true
     max_acceleration: 0.8
-  lwr_a6_joint:
+  lwr_6_joint:
     has_velocity_limits: true
     max_velocity: 0.24
     has_acceleration_limits: true

@@ -34,7 +34,7 @@
 
 	<!-- using the models -->
 	<xacro:kuka_lwr name="lwr">
-		<origin xyz="0 0 1" rpy="0 0 0"/>
+		<origin xyz="0 0.12853 0.20722" rpy="0 ${-75 * M_PI / 180} ${-90 * M_PI / 180}"/>
 	</xacro:kuka_lwr>
 
 </robot>

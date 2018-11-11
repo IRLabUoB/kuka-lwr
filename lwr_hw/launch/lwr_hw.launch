@@ -4,7 +4,7 @@
 	<arg name="name" default="lwr" doc="The kuka lwr 4+ name. Ensure this is the same name you give to the arm in the urdf instance."/>
 
 	<arg name="port" default="49939"/>
-	<arg name="ip" default="192.168.0.20"/>
+	<arg name="ip" default="192.168.0.21"/>
 
 	<arg name="file_with_path" default="" />
 

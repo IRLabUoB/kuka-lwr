@@ -414,7 +414,7 @@ namespace lwr_hw
 
     // Only *standard* transmission_interface are parsed
     transmission_interface::TransmissionParser::parse(urdf_string, transmissions);
-    std::cout << urdf_string_ << std::endl;
+    // std::cout << urdf_string_ << std::endl;
     // Now iterate and save only transmission from this robot
     for (int j = 0; j < n_joints_; ++j)
     {
