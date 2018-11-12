@@ -11,7 +11,7 @@
     
     <!-- the "sim" argument controls whether we connect to a Simulated or Real robot -->
     <!--  - if sim=false, a robot_ip argument is required -->
-    <arg name="sim" default="false" doc="If true, the robot will be simulated in Gazebo" />
+    <arg name="sim" default="true" doc="If true, the robot will be simulated in Gazebo" />
     <arg name="ip" default="192.168.0.21" doc="The IP address of the robot" />
     <arg name="port" default="49939" doc="The listening port of the FRI interface" />
     <arg name="t1_limits" default="false"/>

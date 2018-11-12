@@ -26,21 +26,21 @@
 
 
   <!-- URDF model with default base_link (world)-->
-  <xacro:macro name="kuka_lwr" params="name base_link:=world *origin">
+  <xacro:macro name="kuka_lwr" params="parent name *origin">
 
-    <link name="${base_link}"/>
+    <!-- <link name="${base_link}"/> -->
 
-    <gazebo reference="${base_link}">
+    <!-- <gazebo reference="${base_link}">
       <static>true</static>
       <turnGravityOff>true</turnGravityOff>
-    </gazebo>
+    </gazebo> -->
 
 
     <!-- First (shoulder) element of the arm. Fixed to its parent. -->
     <joint name="${name}_base_joint" type="fixed">
       <xacro:insert_block name="origin"/>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <parent link="${base_link}"/>
+      <parent link="${parent}"/>
       <child link="${name}_base_link"/>
     </joint>
 

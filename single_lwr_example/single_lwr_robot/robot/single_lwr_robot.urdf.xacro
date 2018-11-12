@@ -32,8 +32,10 @@
 		<static>true</static>>
 	</gazebo> -->
 
+	<link name="world" />
+
 	<!-- using the models -->
-	<xacro:kuka_lwr name="lwr">
+	<xacro:kuka_lwr name="lwr" parent="world">
 		<origin xyz="0 0.12853 0.20722" rpy="0 ${-75 * M_PI / 180} ${-90 * M_PI / 180}"/>
 	</xacro:kuka_lwr>
 
