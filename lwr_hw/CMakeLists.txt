@@ -85,7 +85,7 @@ target_link_libraries(lwr_hw_fri_node
 message(WARNING "ATTENTION: This project supports the fork of the Standford library found in https://github.com/iocroblab/fril, and install the libraries in your catkin workspace, not in the system")
 include(ExternalProject)
 ExternalProject_Add(FRILibrary
-  GIT_REPOSITORY https://github.com/iocroblab/fril.git
+  GIT_REPOSITORY https://github.com/eaa3/fril.git
   GIT_TAG a10695fad32ba8315817c42020e2dbc66f4505dd
   BUILD_COMMAND make
   BUILD_IN_SOURCE 1
