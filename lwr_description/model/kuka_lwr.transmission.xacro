@@ -2,8 +2,8 @@
 
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-	<xacro:property name="Interface10" value="PositionJointInterface"/>
-	<xacro:property name="Interface30" value="EffortJointInterface"/>
+	<xacro:property name="Interface10" value="hardware_interface/PositionJointInterface"/>
+	<xacro:property name="Interface30" value="hardware_interface/EffortJointInterface"/>
 
 	<xacro:macro name="kuka_lwr_transmission" params="name">
 
