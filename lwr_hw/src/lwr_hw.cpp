@@ -484,7 +484,10 @@ namespace lwr_hw
     f_dyn_solver_.reset(new KDL::ChainDynParam(lwr_chain_,gravity_));
 
     joint_position_kdl_ = KDL::JntArray(lwr_chain_.getNrOfJoints());
+    joint_velocity_kdl_ = KDL::JntArray(lwr_chain_.getNrOfJoints());
+    joint_acceleration_kdl_ = KDL::JntArray(lwr_chain_.getNrOfJoints());
     gravity_effort_ = KDL::JntArray(lwr_chain_.getNrOfJoints());
+    coriolis_effort_ = KDL::JntArray(lwr_chain_.getNrOfJoints());
 
     return true;
   }

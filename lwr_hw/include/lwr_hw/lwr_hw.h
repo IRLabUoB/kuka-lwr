@@ -162,7 +162,7 @@ public:
   // KDL stuff to compute ik, gravity term, etc.
   KDL::Chain lwr_chain_;
   boost::scoped_ptr<KDL::ChainDynParam> f_dyn_solver_;
-  KDL::JntArray joint_position_kdl_, gravity_effort_;
+  KDL::JntArray joint_position_kdl_, joint_velocity_kdl_, joint_acceleration_kdl_, gravity_effort_, coriolis_effort_;
   KDL::Vector gravity_;
 
 private:

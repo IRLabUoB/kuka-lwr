@@ -59,6 +59,7 @@ public:
       joint_position_kdl_(j) = joint_position_[j];
       // derivate velocity as in the real hardware instead of reading it from simulation
       joint_velocity_[j] = filters::exponentialSmoothing((joint_position_[j] - joint_position_prev_[j])/period.toSec(), joint_velocity_[j], 0.2);
+      joint_velocity_kdl_(j) = joint_velocity_[j];
       joint_effort_[j] = sim_joints_[j]->GetForce((int)(0));
       joint_stiffness_[j] = joint_stiffness_command_[j];
     }
@@ -110,14 +111,16 @@ public:
       case JOINT_IMPEDANCE:
         // compute the gracity term
         f_dyn_solver_->JntToGravity(joint_position_kdl_, gravity_effort_);
+        f_dyn_solver_->JntToCoriolis(joint_position_kdl_, joint_velocity_kdl_, coriolis_effort_);
         
         for(int j=0; j < n_joints_; j++)
         {
           // replicate the joint impedance control strategy
           // tau = k (q_FRI - q_msr) + tau_FRI + D(q_msr) + f_dyn(q_msr)
-          const double stiffness_effort = 0.0;//10.0*( joint_position_command_[j] - joint_position_[j] ); // joint_stiffness_command_[j]*( joint_position_command_[j] - joint_position_[j] );
-          //double damping_effort = joint_damping_command_[j]*( joint_velocity_[j] );
-          const double effort = stiffness_effort + joint_effort_command_[j] + gravity_effort_(j);
+          const double stiffness_effort = joint_stiffness_command_[j]*( joint_position_command_[j] - joint_position_[j] );//0.0;//10.0*( joint_position_command_[j] - joint_position_[j] ); // 
+          double damping_effort = joint_damping_command_[j]*( joint_velocity_[j] );
+          double f_dyn = gravity_effort_(j) + coriolis_effort_(j);
+          const double effort = stiffness_effort + joint_effort_command_[j] + damping_effort + f_dyn;
           sim_joints_[j]->SetForce(0, effort);
         }
         break;
