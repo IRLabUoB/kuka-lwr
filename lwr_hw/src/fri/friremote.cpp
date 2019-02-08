@@ -153,7 +153,7 @@ int friRemote::doJntImpedanceControl(const float newJntPosition[LBR_MNJ],
 
 {
 	// Helper, if not properly initialized or the like...
-	//cmd.cmd.cmdFlags=0;    
+	cmd.cmd.cmdFlags=0;    
 	if (newJntPosition)
 	{
 		cmd.cmd.cmdFlags|=FRI_CMD_JNTPOS;
@@ -199,6 +199,7 @@ int friRemote::doJntImpedanceControl(const float newJntPosition[LBR_MNJ],
 	return 1;
 }
 
+
 	/** automatically do data exchange, if not otherwise specified 
 	if flagDataExchange is set to false, call doDataExchange() 
 	or doReceiveData()/doSendData() on your own
@@ -220,7 +221,7 @@ int friRemote::doCartesianImpedanceControl(const float newCartPosition[FRI_CART_
 {
 
 		// Helper, if not properly initialized or the like...
-// 	cmd.cmd.cmdFlags=0;
+	cmd.cmd.cmdFlags=0;
 	if ( newCartPosition )
 	{
 		cmd.cmd.cmdFlags|=FRI_CMD_CARTPOS;
@@ -273,12 +274,14 @@ int friRemote::doCartesianImpedanceControl(const float newCartPosition[FRI_CART_
 	}
 
 
-	if (flagDataExchange)
+if (flagDataExchange)
 	{
 		return doDataExchange();
 	}
 	return 1;
 }
+
+
 
 
 
