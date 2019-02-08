@@ -23,8 +23,8 @@ class LWRHWFRI : public LWRHW
 
 public:
 
-  LWRHWFRI() : LWRHW() {}
-  ~LWRHWFRI() { stopKRCComm_ = true; KRCCommThread_.get()->join();}
+  LWRHWFRI() : LWRHW(), lastT_(0.0), ts_(0.5) {}
+  ~LWRHWFRI() { stopKRCComm_ = true; /*KRCCommThread_.get()->join();*/}
 
   void setPort(int port){port_ = port; port_set_ = true;};
   void setIP(std::string hintToRemoteHost){hintToRemoteHost_ = hintToRemoteHost; ip_set_ = true;};
@@ -55,13 +55,17 @@ public:
     {
       std::cout << "Please, start the KRL script now." << std::endl;
     }
-    KRCCommThread_.reset( new std::thread( &LWRHWFRI::KRCCommThreadCallback,this ) );
-
+    
+    device_->doDataExchange();
+    //KRCCommThread_.reset( new std::thread( &LWRHWFRI::KRCCommThreadCallback,this ) );
     startFRI();
 
     std::cout << "Ready, FRI has been started!" << std::endl;
     std::cout << "FRI Status:\n" << device_->getMsrBuf().intf << std::endl;
-    sampling_rate_ = device_->getSampleTime();
+
+    float min_sample_time = 1.0f/350;
+    float desired_sample_time = 1.0f/((1.0f/device_->getSampleTime()) + 20.0f); // adding 20.0 Hz extra as buffer so we don't get bad communication error
+    sampling_rate_ = std::max(std::min(desired_sample_time,min_sample_time),min_sample_time);//0.002857143;
     std::cout << "Sampling Rate: " << sampling_rate_ << std::endl;
 
     return true;
@@ -69,6 +73,7 @@ public:
 
   void read(ros::Time time, ros::Duration period)
   {
+
     for (int j = 0; j < n_joints_; j++)
     {
       joint_position_prev_[j] = joint_position_[j];
@@ -87,9 +92,11 @@ public:
     {
         cart_stiff_[j] = cart_stiff_command_[j];
         cart_damp_[j] = cart_damp_command_[j];
-        cart_wrench_[j] = cart_wrench_command_[j];
+        cart_wrench_[j] = device_->getMsrEstTcpFT()[j];
     }
-    return;
+
+    device_->doReceiveData();
+
   }
 
   void write(ros::Time time, ros::Duration period)
@@ -116,6 +123,9 @@ public:
         break;
 
       case CARTESIAN_IMPEDANCE:
+
+
+
         for(int i=0; i < 12; ++i)
         {
           newCartPos[i] = cart_pos_command_[i];
@@ -126,7 +136,35 @@ public:
           newCartDamp[i] = cart_damp_command_[i];
           newAddFT[i] = cart_wrench_command_[i];
         }
+
+
+        // ROS_WARN("CARTESIAN IMPEDANCE: PRINTING THE COMMANDED VALUES:");
+        // std::cout << "Notice that this printing is done only every " << ts_.toSec() << " seconds: to change this, change ts_ in lwr_hw_gazebo.hpp..." << std::endl;
+        // std::cout << "cart_pos_command_ = | ";
+        // for(int i=0; i < 12; ++i)
+        //     std::cout << cart_pos_command_[i] << " | ";
+        // std::cout << std::endl << "cart_stiff_command_ = | ";
+        // for(int i=0; i < 6; i++)
+        //     std::cout << cart_stiff_command_[i] << " | ";
+        // std::cout << std::endl << "cart_damp_command_ = | ";
+        // for(int i=0; i < 6; i++)
+        //     std::cout << cart_damp_command_[i] << " | ";
+        // std::cout << std::endl << "cart_wrench_command_ = | ";
+        // for(int i=0; i < 6; i++)
+        //     std::cout << cart_wrench_command_[i] << " | ";
+        
+        // std::cout << std::endl << "cart_wrench_estimated_krc_ = | ";
+        // for(int i=0; i < 6; i++)
+        //     std::cout << cart_wrench_[i] << " | ";
+        // std::cout << std::endl << "Here, the call to doCartesianImpedanceControl() is done" << std::endl;
+
         device_->doCartesianImpedanceControl(newCartPos, newCartStiff, newCartDamp, newAddFT, NULL, false);
+
+        // if(time-lastT_ < ts_)
+        //     break;
+
+        // lastT_ = time;
+        
         break;
 
       case JOINT_IMPEDANCE:
@@ -163,53 +201,76 @@ public:
         device_->doJntImpedanceControl(device_->getMsrMsrJntPosition(), NULL, NULL, NULL, false);
         break;
     }
-    return;
+
+     device_->doSendData();
+
+  }
+
+  bool prepareSwitch(const std::list<hardware_interface::ControllerInfo> &start_list, const std::list<hardware_interface::ControllerInfo> &stop_list){
+
+    std::cout << "Preparing switch..." << std::endl;
+    std::cout << "Waiting...." << std::endl;
+
+    // at this point, we now that there is only one controller that ones to command joints
+    ControlStrategy desired_strategy = JOINT_POSITION; // default
+    
+    desired_strategy_ = getNewControlStrategy(start_list, stop_list, desired_strategy_);
+
+    switch_strategy_ = desired_strategy_ != getControlStrategy();
+    
+
+    return true;
   }
 
   void doSwitch(const std::list<hardware_interface::ControllerInfo> &start_list, const std::list<hardware_interface::ControllerInfo> &stop_list)
   {
-    // at this point, we now that there is only one controller that ones to command joints
-    ControlStrategy desired_strategy = JOINT_POSITION; // default
+    
+   
+      for (int j = 0; j < n_joints_; ++j)
+      {
+        ///semantic Zero
+        joint_position_command_[j] = joint_position_[j];
+        joint_effort_command_[j] = 0.0;
 
-    desired_strategy = getNewControlStrategy(start_list,stop_list,desired_strategy);
+        ///call setCommand once so that the JointLimitsInterface receive the correct value on their getCommand()!
+        try{  position_interface_.getHandle(joint_names_[j]).setCommand(joint_position_command_[j]);  }
+        catch(const hardware_interface::HardwareInterfaceException&){}
+        try{  effort_interface_.getHandle(joint_names_[j]).setCommand(joint_effort_command_[j]);  }
+        catch(const hardware_interface::HardwareInterfaceException&){}
 
-    for (int j = 0; j < n_joints_; ++j)
-    {
-      ///semantic Zero
-      joint_position_command_[j] = joint_position_[j];
-      joint_effort_command_[j] = 0.0;
+        ///reset joint_limit_interfaces
+        pj_sat_interface_.reset();
+        pj_limits_interface_.reset();
+      }
 
-      ///call setCommand once so that the JointLimitsInterface receive the correct value on their getCommand()!
-      try{  position_interface_.getHandle(joint_names_[j]).setCommand(joint_position_command_[j]);  }
-      catch(const hardware_interface::HardwareInterfaceException&){}
-      try{  effort_interface_.getHandle(joint_names_[j]).setCommand(joint_effort_command_[j]);  }
-      catch(const hardware_interface::HardwareInterfaceException&){}
-
-      ///reset joint_limit_interfaces
-      pj_sat_interface_.reset();
-      pj_limits_interface_.reset();
-    }
-
-    if(desired_strategy == getControlStrategy())
+    
+  
+    if(!switch_strategy_)
     {
       std::cout << "The ControlStrategy didn't change, it is already: " << getControlStrategy() << std::endl;
     }
     else
     {
       stopFRI();
-
-      // send to KRL the new strategy
-      if( desired_strategy == JOINT_POSITION )
-        device_->setToKRLInt(0, JOINT_POSITION);
-      else if( desired_strategy == JOINT_IMPEDANCE)
-        device_->setToKRLInt(0, JOINT_IMPEDANCE);
-      else if( desired_strategy == CARTESIAN_IMPEDANCE)
-        device_->setToKRLInt(0, CARTESIAN_IMPEDANCE);
-
+      switch(desired_strategy_){
+        case JOINT_POSITION:
+          device_->setToKRLInt(0, JOINT_POSITION);
+          break;
+        case JOINT_IMPEDANCE:
+          device_->setToKRLInt(0, JOINT_IMPEDANCE);
+          break;
+        case CARTESIAN_IMPEDANCE:
+          device_->setToKRLInt(0, CARTESIAN_IMPEDANCE);
+          break;
+        default:
+          //unkown strategy
+          break;
+      }
 
       startFRI();
 
-      setControlStrategy(desired_strategy);
+      setControlStrategy(desired_strategy_);
+      
       std::cout << "The ControlStrategy changed to: " << getControlStrategy() << std::endl;
     }
   }
@@ -231,6 +292,13 @@ private:
 
   float sampling_rate_;
 
+  ros::Time lastT_;
+  ros::Duration ts_;
+
+  //Control strategy
+  bool switch_strategy_;
+  ControlStrategy desired_strategy_;
+
   boost::shared_ptr<std::thread> KRCCommThread_;
   bool stopKRCComm_ = false;
   void KRCCommThreadCallback()
@@ -238,6 +306,7 @@ private:
     while(!stopKRCComm_)
     {
       device_->doDataExchange();
+      usleep(500);
     }
     return;
   }
@@ -249,6 +318,13 @@ private:
     // while( device_->getQuality() != FRI_QUALITY_OK ){};
     device_->setToKRLInt(1, 1);
     device_->doDataExchange();
+    // while ( device_->getFrmKRLInt(1) != 1 )
+    // {
+    //     //std::cout << "Waiting for command mode..." << std::endl;
+    //     device_->setToKRLInt(1, 1);
+    //     device_->doDataExchange();
+    //     usleep(100);
+    // }
 
     // std::cout << "Waiting for command mode..." << std::endl;
     // while ( device_->getFrmKRLInt(1) != 1 )
@@ -265,7 +341,12 @@ private:
     // wait until FRI enters in command mode
     device_->setToKRLInt(1, 0);
     std::cout << "Waiting for monitor mode..." << std::endl;
-    while ( device_->getFrmKRLInt(1) != 0 ){}
+    while ( device_->getFrmKRLInt(1) != 0 ){
+      device_->setToKRLInt(1, 0);
+      device_->doDataExchange();
+      usleep(1000);
+    }
+    std::cout << "It is in monitor mode" << std::endl;
     // {
       // std::cout << "device_->getState(): " << device_->getState() << std::endl;
       // std::cout << "Waiting for monitor mode..." << std::endl;
