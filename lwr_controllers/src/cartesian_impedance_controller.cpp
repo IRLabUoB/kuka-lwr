@@ -108,7 +108,7 @@ namespace lwr_controllers
         }
 
         // // may be needed, to set initial commands asap
-        // starting(ros::Time::now());
+        //starting(ros::Time::now());
 
         return true;
     }
@@ -119,7 +119,7 @@ namespace lwr_controllers
         x_des_ = x_ref_;
 
         // Initial Cartesian stiffness
-        KDL::Stiffness k( 800.0, 800.0, 800.0, 50.0, 50.0, 50.0 );
+        KDL::Stiffness k( 300.0, 300.0, 300.0, 20.0, 20.0, 20.0 );
         k_des_ = k;
 
         // Initial Cartesian damping
