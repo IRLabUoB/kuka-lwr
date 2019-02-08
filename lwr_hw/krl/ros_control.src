@@ -85,6 +85,11 @@ DEF ros_control( )
   ;$stiffness.axisdamping = {A1 0.7, A2 0.7, A3 0.7, A4 0.7, A5 0.7, A6 0.7, E1 0.7}
   $stiffness.axismaxdeltatrq={A1 100, A2 100, A3 100, A4 100, A5 100, A6 30, E1 30}
   $stiffness.axismaxdelta = {A1 100.0, A2 100.0, A3 100.0, A4 100.0, A5 100.0, A6 100.0, E1 100.0}
+  ; Extra limits for cartesian space (not being used right now)
+  ;stiffness.cpmaxdelta = {X 2000, Y 2000, Z 2000, A 180, B 180, C 180}
+  ;stiffness.maxforce = {X 900, Y 900, Z 900, A 900, B 900, C 900}
+  ;$stiffness.cpstiffness = {x 200, y 200, z 200, a 20, b 20, c 20}
+  ;$stiffness.cpdamping = { x 0.7, y 0.7, z 0.7, a 0.7, b 0.7, c 0.7}
 
   ;Start with position control
   $stiffness.strategy = 10
@@ -92,13 +97,13 @@ DEF ros_control( )
 ;ENDFOLD (init)
 
 ;Input correct tool number here and restart
-BAS (#tool,1 )
+BAS (#tool,10 )
 
 ;Specify ip and port
 retVal = friSetup("192.168.0.150", 49939, 49939)
 
-;Open FRI with datarate 2 msec
-retVal=friOpen(2)
+;Open FRI with datarate 3 msec
+retVal=friOpen(3)
 
 ;FOLD Screen output
   WAIT FOR ($FriState == #MON)
