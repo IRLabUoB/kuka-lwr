@@ -13,7 +13,76 @@
 // lwr hw definition
 #include "lwr_hw/lwr_hw.h"
 
+#include "lwr_hw/eigen.hpp"
+
 namespace lwr_hw {
+
+
+//   //! adds torques to cmd.addTorque
+// //! and replaces cmd.stiffness, cmd.damping and cmd.command
+// void CartesianImpedanceControl::computeRobotCommand(const tFriMsrData& fri_msr,
+//         const tFriCmdData& fri_cmd, const CartesianImpedance& imp, const float* cmdpos)
+// {
+//   for(int i=0; i < 7; i++)
+//   {
+//     q_last_[i]  = fri_msr.data.msrJntPos[i];
+
+//     q_kdl_(i) = fri_msr.data.msrJntPos[i];
+//   }
+
+//   // define matrix expressions for most of the matrices we use.
+//   PlainObjectBase<Matrix<float, 7, 1> > q_des = Matrix<float, 7, 1>::Map(&(fri_cmd.cmd.jntPos[0]));
+//   PlainObjectBase<Matrix<float, 7, 1> > q_cmd = Matrix<float, 7, 1>::Map(&(cmdpos[0]));
+//   PlainObjectBase<Matrix<float, 7, 1> > q     = Matrix<float, 7, 1>::Map(&(fri_msr.data.msrJntPos[0]));
+//   PlainObjectBase<Matrix<float, 7, 7> > M     = Matrix<float, 7, 7, RowMajor>::Map(&(fri_msr.data.massMatrix[0]));
+
+//   PlainObjectBase<Matrix<float, 6, 6> > D  = Matrix<float, 6, 6, RowMajor>::Map(&(imp.D[0]));
+//   PlainObjectBase<Matrix<float, 6, 6> > K  = Matrix<float, 6, 6, RowMajor>::Map(&(imp.K[0]));
+//   PlainObjectBase<Matrix<float, 6, 1> > ft = Matrix<float, 6, 1>::Map(&(imp.ft[0]));
+
+//   // compute Jacobian
+//   jnt2jac_->JntToJac(q_kdl_, J_kdl_);
+//   // Eigen requires us to explicitly cast this data type, sorry...
+//   PlainObjectBase<Eigen::Matrix<float,6,7> > J = J_kdl_.data.cast<float>();
+
+//   // since no reliable information on the
+//   // 'normalization' of the damping was to be found,
+//   // we stick with the joint damping controllers only.
+//   Matrix<float, 7, 1> damping = (J.transpose()*D*J).diagonal();
+
+//   // Note: we are ignoring the term (dJ^T/dq^T)*K*deltax.
+//   // Assuming that J does not change much in one cartesian cycle,
+//   // we spare ourselves the hassle of deriving J once more.
+//   Matrix<float, 7, 1> stiffness = (J.transpose()*K*J).diagonal();
+
+//   // this value can use the full matrix K, which the joint impedance controllers can't
+//   Matrix<float, 7, 1> tau_add = J.transpose() * (K*J*(q_des - q) + ft) - stiffness.asDiagonal()*(q_cmd - q);
+
+
+//   // null space stiffness, commented, requires testing
+//   //pinv(J_kdl_.data, Jinv);
+
+//   //Matrix<float, 7, 1> K_null;
+//   //float s = imp.K_null;
+//   //K_null << s, s, s, s, s, s, s;
+
+//   //TODO: compute correct mass matrix
+//   //MatrixXf tau_null = Jinv*J*K_null.asDiagonal()*(q_des - q);
+
+//   //tau_add += tau_null;
+
+
+//   tFriCmdData fri_cmd_cart=fri_cmd;
+//   for(int i=0; i < 7; i++)
+//   {
+//     fri_cmd_cart.cmd.jntPos[i]       = cmdpos[i];
+//     fri_cmd_cart.cmd.addJntTrq[i]    = fri_cmd.cmd.addJntTrq[i] + tau_add(i);
+//     fri_cmd_cart.cmd.jntStiffness[i] = stiffness(i);
+//     fri_cmd_cart.cmd.jntDamping[i]   = damping(i);
+//   }
+
+//   return fri_cmd_cart;
+// }
 
 class LWRHWGazebo : public LWRHW
 {
@@ -63,11 +132,58 @@ public:
       joint_effort_[j] = sim_joints_[j]->GetForce((int)(0));
       joint_stiffness_[j] = joint_stiffness_command_[j];
     }
+
+    fk_pos_solver_->JntToCart(joint_position_kdl_,ee_frame_);
+
+    ee_position_ = eigen_utils::toEigen(ee_frame_.p);
+    ee_orientation_ = eigen_utils::toEigen(ee_frame_.M);
+    ee_transform_ = eigen_utils::toEigen(ee_frame_);
+    jnt2jac_->JntToJac(joint_position_kdl_, J_kdl_);
+
+    f_dyn_solver_->JntToGravity(joint_position_kdl_, gravity_effort_);
+    f_dyn_solver_->JntToCoriolis(joint_position_kdl_, joint_velocity_kdl_, coriolis_effort_);
+    
   }
 
   void write(ros::Time time, ros::Duration period)
   {
     enforceLimits(period);
+
+    Eigen::Matrix<double, 3, 3> rotation;
+    
+    
+
+    rotation(0,0) = cart_pos_command_[0]; rotation(1,0) = cart_pos_command_[4]; rotation(2,0) = cart_pos_command_[8];
+    rotation(0,1) = cart_pos_command_[1]; rotation(1,1) = cart_pos_command_[5]; rotation(2,1) = cart_pos_command_[9];
+    rotation(0,2) = cart_pos_command_[2]; rotation(1,2) = cart_pos_command_[6]; rotation(2,2) = cart_pos_command_[10];
+    Eigen::Quaterniond orientation_d(rotation);
+    Eigen::Vector3d position_d(cart_pos_command_[3],cart_pos_command_[7],cart_pos_command_[11]);
+
+    Eigen::Map<const Eigen::Matrix<double, 6, 1> > wrench_ext(cart_wrench_command_.data());
+
+    Eigen::Ref< Eigen::Matrix<double, 7, 1> > coriolis(coriolis_effort_.data);
+    Eigen::Ref< Eigen::Matrix<double, 7, 1> > gravity(gravity_effort_.data);
+    Eigen::Map<const Eigen::Matrix<double, 7, 1> > dq(joint_velocity_.data());
+    Eigen::Map<const Eigen::Matrix<double, 6, 1> > stiffness(cart_stiff_command_.data());
+    Eigen::Map<const Eigen::Matrix<double, 6, 1> > damping(cart_damp_command_.data());
+    
+    //cart_damp_command_
+    // /Eigen::Map<Eigen::Matrix<double, 7, 1> > gravity(gravity_effort_.data);
+
+    Eigen::Matrix<double,6,7> jacobian = J_kdl_.data.cast<double>();
+
+    // Position error
+    Eigen::Matrix<double, 6, 1> error;
+    error.head(3) << ee_position_ - position_d;
+
+    // Orientation error
+    Eigen::Quaterniond error_quaternion(ee_orientation_.inverse() * orientation_d);
+    error.tail(3) << error_quaternion.x(), error_quaternion.y(), error_quaternion.z();
+    // Transform to base frame
+    error.tail(3) << -ee_transform_.linear() * error.tail(3);
+
+    Eigen::VectorXd tau_cmd(7), tau_d(7), tau_dyn(7);
+    
 
     switch (getControlStrategy())
     {
@@ -88,10 +204,21 @@ public:
         break;
 
       case CARTESIAN_IMPEDANCE:
+        
+        // Spring damper system with damping ratio=1
+        tau_dyn = coriolis + gravity;
+        tau_cmd << jacobian.transpose() * (-stiffness.cwiseProduct(error) - damping.cwiseProduct(jacobian * dq) + wrench_ext);
+        tau_d << tau_cmd + tau_dyn;
+        
+        for(int j=0; j < n_joints_; j++)
+        {
+          sim_joints_[j]->SetForce(0, tau_d(j));
+        }
+
         if(time-lastT_ < ts_)
             break;
         lastT_ = time;
-        ROS_WARN("CARTESIAN IMPEDANCE NOT AVAILABLE IN GAZEBO, PRINTING THE COMMANDED VALUES:");
+        ROS_WARN("CARTESIAN IMPEDANCE IMPLEMENTATION IN GAZEBO, PRINTING THE COMMANDED VALUES:");
         std::cout << "Notice that this printing is done only every " << ts_.toSec() << " seconds: to change this, change ts_ in lwr_hw_gazebo.hpp..." << std::endl;
         std::cout << "cart_pos_command_ = | ";
         for(int i=0; i < 12; ++i)
@@ -110,8 +237,6 @@ public:
 
       case JOINT_IMPEDANCE:
         // compute the gracity term
-        f_dyn_solver_->JntToGravity(joint_position_kdl_, gravity_effort_);
-        f_dyn_solver_->JntToCoriolis(joint_position_kdl_, joint_velocity_kdl_, coriolis_effort_);
         
         for(int j=0; j < n_joints_; j++)
         {

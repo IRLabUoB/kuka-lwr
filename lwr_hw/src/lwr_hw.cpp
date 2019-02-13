@@ -482,7 +482,10 @@ namespace lwr_hw
     ROS_INFO("Number of joints in chain: %d", lwr_chain_.getNrOfJoints());
 
     f_dyn_solver_.reset(new KDL::ChainDynParam(lwr_chain_,gravity_));
-
+    jnt2jac_.reset(new KDL::ChainJntToJacSolver(lwr_chain_));
+    fk_pos_solver_.reset(new KDL::ChainFkSolverPos_recursive(lwr_chain_));
+    
+    J_kdl_ = KDL::Jacobian(lwr_chain_.getNrOfJoints());
     joint_position_kdl_ = KDL::JntArray(lwr_chain_.getNrOfJoints());
     joint_velocity_kdl_ = KDL::JntArray(lwr_chain_.getNrOfJoints());
     joint_acceleration_kdl_ = KDL::JntArray(lwr_chain_.getNrOfJoints());

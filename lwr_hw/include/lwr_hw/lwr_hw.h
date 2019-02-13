@@ -25,6 +25,11 @@
 #include <kdl/chain.hpp>
 #include <kdl/chaindynparam.hpp> //this to compute the gravity verctor
 #include <kdl_parser/kdl_parser.hpp>
+#include <kdl/chainjnttojacsolver.hpp>
+#include <kdl/chainfksolverpos_recursive.hpp>
+
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 
 namespace lwr_hw
 {
@@ -162,8 +167,16 @@ public:
   // KDL stuff to compute ik, gravity term, etc.
   KDL::Chain lwr_chain_;
   boost::scoped_ptr<KDL::ChainDynParam> f_dyn_solver_;
+  boost::scoped_ptr<KDL::ChainJntToJacSolver> jnt2jac_;
+  boost::scoped_ptr<KDL::ChainFkSolverPos_recursive> fk_pos_solver_;
+  KDL::Jacobian J_kdl_;
+  KDL::Frame ee_frame_;
   KDL::JntArray joint_position_kdl_, joint_velocity_kdl_, joint_acceleration_kdl_, gravity_effort_, coriolis_effort_;
   KDL::Vector gravity_;
+
+  Eigen::Vector3d ee_position_;
+  Eigen::Quaterniond ee_orientation_;
+  Eigen::Affine3d ee_transform_;
 
 private:
 
