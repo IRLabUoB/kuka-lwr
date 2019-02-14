@@ -22,6 +22,8 @@
 // The format of the command specification
 #include "lwr_controllers/SetCartesianImpedanceCommand.h"
 
+#include <mutex>
+
 namespace lwr_controllers
 {
     class CartesianImpedanceController: public controller_interface::Controller<hardware_interface::PositionCartesianInterface>
@@ -78,6 +80,8 @@ namespace lwr_controllers
 		KDL::Stiffness k_des_;
         KDL::Stiffness d_des_;
 
+        std::mutex goal_mutex_;
+
 		// This class does not exist, should we ask for it? 0, for now.
 		// KDL::Damping d_des_; 
 
@@ -109,6 +113,8 @@ namespace lwr_controllers
         void fromFRItoKDL(const std::vector<double>& in, KDL::Frame& out);
         void fromFRItoKDL(const std::vector<double>& in, KDL::Stiffness& out);
         void fromFRItoKDL(const std::vector<double>& in, KDL::Wrench& out);
+
+
 	};
 
 }

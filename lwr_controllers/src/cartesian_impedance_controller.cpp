@@ -116,7 +116,10 @@ namespace lwr_controllers
     void CartesianImpedanceController::starting(const ros::Time& time)
     {
         getCurrentPose(x_ref_);
+
+        goal_mutex_.lock();
         x_des_ = x_ref_;
+        
 
         // Initial Cartesian stiffness
         KDL::Stiffness k( 300.0, 300.0, 300.0, 20.0, 20.0, 20.0 );
@@ -132,17 +135,18 @@ namespace lwr_controllers
 
         // forward initial commands to hwi
         forwardCmdFRI(x_des_);
+        goal_mutex_.unlock();
     }
 
     void CartesianImpedanceController::command(const lwr_controllers::CartesianImpedancePoint::ConstPtr &msg)
     {
         // Validate command, for now, only check non-zero of stiffness, damping, and orientation
 
-
+        goal_mutex_.lock();
         // Compute a KDL frame out of the message
         tf::poseMsgToKDL( msg->x_FRI, x_des_ );
         // Pre-multiply the pose to make sure it is expressed in the correct frame
-        x_des_ = robotBase_controllerBase_ * x_des_;
+        //x_des_ =  x_des_;
 
         // Convert Wrench msg to KDL wrench
         tf::wrenchMsgToKDL( msg->f_FRI, f_des_ );
@@ -163,7 +167,12 @@ namespace lwr_controllers
         geometry_msgs::PoseStamped goal;
         goal.header = msg->header;
         goal.pose = msg->x_FRI;
+
+        goal_mutex_.unlock();
+
         pub_goal_.publish(goal);
+
+        
 
     }
 
@@ -192,7 +201,11 @@ namespace lwr_controllers
 
         // forward commands to hwi
         // std::cout << "Before forwarding the command" << std::endl;
+        goal_mutex_.lock();
         forwardCmdFRI(x_des_);
+        goal_mutex_.unlock();
+
+        //pub_goal_.publish(goal);
     }
 
     void CartesianImpedanceController::stopping(const ros::Time& time)
@@ -320,6 +333,7 @@ namespace lwr_controllers
     {
         if (realtime_pose_pub_->trylock()) {
             realtime_pose_pub_->msg_.header.stamp = ros::Time::now();
+            realtime_pose_pub_->msg_.header.frame_id = "left_arm_base_link";
             tf::poseKDLToMsg(f, realtime_pose_pub_->msg_.pose);
             realtime_pose_pub_->unlockAndPublish();
         }

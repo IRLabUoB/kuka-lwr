@@ -33,6 +33,7 @@ add_message_files(
    MultiPriorityTask.msg
    ArmState.msg
    CartesianImpedancePoint.msg
+   JointImpedancePoint.msg
    Stiffness.msg
 )
 add_service_files(
@@ -64,6 +65,7 @@ catkin_package(
 )
 
 add_library(${PROJECT_NAME}
+  src/joint_impedance_ctrl.cpp
   src/joint_impedance_controller.cpp	
   src/inverse_dynamics_controller.cpp
   src/computed_torque_controller.cpp

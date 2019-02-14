@@ -12,6 +12,7 @@
 #include <thread>
 #include "fri/friudp.h"
 #include "fri/friremote.h"
+#include "lwr_hw/eigen.hpp"
 
 // ToDo: add timeouts to all sync-while's to KRL since the UDP connection might be lost and we will know
 
@@ -63,9 +64,9 @@ public:
     std::cout << "Ready, FRI has been started!" << std::endl;
     std::cout << "FRI Status:\n" << device_->getMsrBuf().intf << std::endl;
 
-    float min_sample_time = 1.0f/350;
+    float min_sample_time = 1.0f/100;
     float desired_sample_time = 1.0f/((1.0f/device_->getSampleTime()) + 20.0f); // adding 20.0 Hz extra as buffer so we don't get bad communication error
-    sampling_rate_ = std::max(std::min(desired_sample_time,min_sample_time),min_sample_time);//0.002857143;
+    sampling_rate_ = desired_sample_time;//0.002857143;
     std::cout << "Sampling Rate: " << sampling_rate_ << std::endl;
 
     return true;
@@ -95,6 +96,17 @@ public:
         cart_wrench_[j] = device_->getMsrEstTcpFT()[j];
     }
 
+    fk_pos_solver_->JntToCart(joint_position_kdl_,ee_frame_);
+
+    ee_position_ = eigen_utils::toEigen(ee_frame_.p);
+    ee_orientation_ = eigen_utils::toEigen(ee_frame_.M);
+    ee_transform_ = eigen_utils::toEigen(ee_frame_);
+    jnt2jac_->JntToJac(joint_position_kdl_, J_kdl_);
+
+   
+    // f_dyn_solver_->JntToGravity(joint_position_kdl_, gravity_effort_);
+    // f_dyn_solver_->JntToCoriolis(joint_position_kdl_, joint_velocity_kdl_, coriolis_effort_);
+
     device_->doReceiveData();
 
   }
@@ -120,6 +132,7 @@ public:
           newJntPosition[j] = joint_position_command_[j];
         }
         device_->doPositionControl(newJntPosition, false);
+        
         break;
 
       case CARTESIAN_IMPEDANCE:
@@ -181,11 +194,13 @@ public:
      case JOINT_EFFORT:
         for(int j=0; j < n_joints_; j++)
         {
-            newJntAddTorque[j] = joint_effort_command_[j];
-            newJntStiff[j] = 0.0;
+          newJntPosition[j] = joint_set_point_command_[j];
+          newJntStiff[j] = 100.0;//joint_stiffness_command_[j];
+          newJntAddTorque[j] = joint_effort_command_[j];
         }
+        device_->doJntImpedanceControl(device_->getMsrMsrJntPosition(), newJntStiff, NULL, NULL, false);
         // mirror the position
-        device_->doJntImpedanceControl(device_->getMsrMsrJntPosition(), newJntStiff, NULL, newJntAddTorque, false);
+        //device_->doJntImpedanceControl(device_->getMsrMsrJntPosition(), newJntStiff, NULL, newJntAddTorque, false);
         break;
 
       case JOINT_STIFFNESS:
@@ -318,12 +333,13 @@ private:
     // while( device_->getQuality() != FRI_QUALITY_OK ){};
     device_->setToKRLInt(1, 1);
     device_->doDataExchange();
+    
     // while ( device_->getFrmKRLInt(1) != 1 )
     // {
     //     //std::cout << "Waiting for command mode..." << std::endl;
     //     device_->setToKRLInt(1, 1);
     //     device_->doDataExchange();
-    //     usleep(100);
+    //     usleep(5);
     // }
 
     // std::cout << "Waiting for command mode..." << std::endl;
@@ -344,7 +360,7 @@ private:
     while ( device_->getFrmKRLInt(1) != 0 ){
       device_->setToKRLInt(1, 0);
       device_->doDataExchange();
-      usleep(1000);
+      usleep(500);
     }
     std::cout << "It is in monitor mode" << std::endl;
     // {

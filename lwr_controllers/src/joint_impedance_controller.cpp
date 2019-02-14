@@ -56,18 +56,22 @@ bool JointImpedanceController::init(hardware_interface::EffortJointInterface *ro
 
 void JointImpedanceController::starting(const ros::Time& time)
 {
+    cmd_mutex.lock();
     // Initializing stiffness, damping, ext_torque and set point values
     for (size_t i = 0; i < joint_handles_.size(); i++) {
         tau_des_(i) = 0.0;
         q_des_(i) = joint_handles_[i].getPosition();
+        
     }
+
+    cmd_mutex.unlock();
 
 
 }
 
 void JointImpedanceController::update(const ros::Time& time, const ros::Duration& period)
 {
-
+    cmd_mutex.lock();
     //Compute control law. This controller sets all variables for the JointImpedance Interface from kuka
     for (size_t i = 0; i < joint_handles_.size(); i++)
     {
@@ -76,6 +80,7 @@ void JointImpedanceController::update(const ros::Time& time, const ros::Duration
         joint_damping_handles_[i].setCommand(D_(i));
         joint_set_point_handles_[i].setCommand(q_des_(i));
     }
+    cmd_mutex.unlock();
 
 }
 
@@ -90,8 +95,18 @@ void JointImpedanceController::command(const std_msgs::Float64MultiArray::ConstP
     }
     else
     {
-        for (unsigned int j = 0; j < joint_handles_.size(); ++j)
+        
+        ROS_INFO("GOT it!");
+        cmd_mutex.lock();
+        for (unsigned int j = 0; j < joint_handles_.size(); ++j){
             q_des_(j) = msg->data[j];
+        }
+        cmd_mutex.unlock();
+        
+        ROS_INFO("Qdes: %.2lf, %.2lf, %.2lf %.2lf, %.2lf, %.2lf, %.2lf", q_des_(0),q_des_(1),q_des_(2),q_des_(3),q_des_(4),q_des_(5),q_des_(6));
+        ROS_INFO("Taudes: %.2lf, %.2lf, %.2lf %.2lf, %.2lf, %.2lf, %.2lf", tau_des_(0),tau_des_(1),tau_des_(2),tau_des_(3),tau_des_(4),tau_des_(5),tau_des_(6));
+        ROS_INFO("Stiffness: %.2lf, %.2lf, %.2lf %.2lf, %.2lf, %.2lf, %.2lf", K_(0),K_(1),K_(2),K_(3),K_(4),K_(5),K_(6));
+        ROS_INFO("Damping: %.2lf, %.2lf, %.2lf %.2lf, %.2lf, %.2lf, %.2lf", D_(0),D_(1),D_(2),D_(3),D_(4),D_(5),D_(6));
     }
 
 }
@@ -100,10 +115,12 @@ void JointImpedanceController::setParam(const std_msgs::Float64MultiArray_< std:
 {
     if (msg->data.size() == joint_handles_.size())
     {
+        cmd_mutex.lock();
         for (unsigned int i = 0; i < joint_handles_.size(); ++i)
         {
             (*array)(i) = msg->data[i];
         }
+        cmd_mutex.unlock();
     }
     else
     {
